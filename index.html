@@ -22,6 +22,7 @@
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --accent-green: #10b981;
+            --danger-red: #ef4444;
         }
 
         * {
@@ -267,7 +268,7 @@
             align-items: center;
             border-bottom: 1px solid #334155;
             padding-bottom: 12px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .drawer-header h3 {
@@ -287,6 +288,28 @@
             cursor: pointer;
         }
 
+        .drawer-actions {
+            margin-bottom: 12px;
+            text-align: right;
+        }
+
+        .btn-clear-all {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-clear-all:hover {
+            background: var(--danger-red);
+            color: white;
+        }
+
         .history-list {
             flex: 1;
             overflow-y: auto;
@@ -301,15 +324,31 @@
             padding: 12px;
             border-radius: 12px;
             text-align: left;
+            position: relative;
         }
 
         .history-card-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 14px;
             font-weight: 700;
             color: #10b981;
             margin-bottom: 4px;
+        }
+
+        .btn-delete-single {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 4px;
+            transition: 0.2s;
+        }
+
+        .btn-delete-single:hover {
+            color: var(--danger-red);
         }
 
         .history-card-time {
@@ -391,6 +430,11 @@
         <h3><i class="fa-solid fa-link"></i> Link History</h3>
         <button class="close-btn" onclick="toggleDrawer(false)"><i class="fa-solid fa-xmark"></i></button>
     </div>
+    <div class="drawer-actions">
+        <button class="btn-clear-all" onclick="clearAllHistory()">
+            <i class="fa-solid fa-trash-can"></i> Clear All History
+        </button>
+    </div>
     <div id="historyList" class="history-list">
         <p style="text-align: center; color: #64748b; font-size: 12px;">Loading saved links...</p>
     </div>
@@ -414,7 +458,17 @@
     }
     const database = firebase.database();
 
-    let currentUpiUrl = "";
+    let currentImageUrl = "";
+
+    // On Page Load: Read URL Parameter and Auto Generate QR Code
+    window.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const amtParam = urlParams.get("amt");
+        if (amtParam && parseFloat(amtParam) > 0) {
+            document.getElementById("amount").value = amtParam;
+            generateQR(false); // don't save duplicate entry on auto load
+        }
+    });
 
     function checkInput() {
         const val = document.getElementById("amount").value;
@@ -423,7 +477,7 @@
         }
     }
 
-    function generateQR() {
+    function generateQR(saveToDb = true) {
         const amount = document.getElementById("amount").value;
         const qrContainer = document.getElementById("qrcode");
         const qrSection = document.getElementById("qrSection");
@@ -436,12 +490,15 @@
 
         // Encrypted UPI ID Base64: s.kumar.2372@superyes
         const vpa = atob("cy5rdW1hci4yMzcyQHN1cGVyeWVz"); 
-        currentUpiUrl = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Merchant&am=${encodeURIComponent(amount)}&cu=INR`;
+        const upiData = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Merchant&am=${encodeURIComponent(amount)}&cu=INR`;
+
+        // Direct Normal HTTPS Image Link (No Base64)
+        currentImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(upiData)}&size=200&format=png`;
 
         qrContainer.innerHTML = "";
         
         new QRCode(qrContainer, {
-            text: currentUpiUrl,
+            text: upiData,
             width: 180,
             height: 180,
             colorDark: "#0f172a",
@@ -452,35 +509,13 @@
         amountDisplay.innerText = `Pay: ₹${parseFloat(amount).toLocaleString('en-IN')}`;
         qrSection.style.display = "block";
 
-        // Auto Save to Firebase
-        setTimeout(() => {
-            const jpegDataUrl = getQRJpegDataUrl();
-            if (jpegDataUrl) {
-                saveToRealtimeDB(amount, jpegDataUrl);
-            }
-        }, 300);
+        // Save Normal Image URL to Firebase
+        if (saveToDb) {
+            saveToRealtimeDB(amount, currentImageUrl);
+        }
     }
 
-    function getQRJpegDataUrl() {
-        const canvas = document.querySelector("#qrcode canvas");
-        if (canvas) {
-            return canvas.toDataURL("image/jpeg", 0.9);
-        }
-        const img = document.querySelector("#qrcode img");
-        if (img && img.src) {
-            const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = img.naturalWidth || 180;
-            tempCanvas.height = img.naturalHeight || 180;
-            const ctx = tempCanvas.getContext("2d");
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            ctx.drawImage(img, 0, 0);
-            return tempCanvas.toDataURL("image/jpeg", 0.9);
-        }
-        return null;
-    }
-
-    // Save to Firebase Database under 'qr_history' node
+    // Save Normal Link to Firebase
     function saveToRealtimeDB(amount, imageUrl) {
         const newRecordRef = database.ref("qr_history").push();
         newRecordRef.set({
@@ -519,15 +554,19 @@
                 return;
             }
 
-            const items = Object.keys(data).map(key => data[key]).reverse();
+            const keys = Object.keys(data).reverse();
 
-            items.forEach((item) => {
+            keys.forEach((key) => {
+                const item = data[key];
                 const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : "Just now";
                 const card = document.createElement("div");
                 card.className = "history-card";
                 card.innerHTML = `
                     <div class="history-card-header">
                         <span>₹${parseFloat(item.amount).toLocaleString('en-IN')}</span>
+                        <button class="btn-delete-single" onclick="deleteHistoryItem('${key}')" title="Delete Link">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                     <div class="history-card-time">${timeStr}</div>
                     <button class="btn-card-copy" onclick="copyText('${item.imageUrl}')">
@@ -543,13 +582,30 @@
         });
     }
 
-    // Download JPEG File
+    // Delete single history item
+    function deleteHistoryItem(key) {
+        if (confirm("Kya aap is link ko delete karna chahte hain?")) {
+            database.ref("qr_history/" + key).remove()
+            .then(() => fetchHistoryFromDB())
+            .catch(err => alert("Delete karne me error aaya!"));
+        }
+    }
+
+    // Clear all history items
+    function clearAllHistory() {
+        if (confirm("Kya aap saare history links clear karna chahte hain?")) {
+            database.ref("qr_history").remove()
+            .then(() => fetchHistoryFromDB())
+            .catch(err => alert("Clear karte waqt error aaya!"));
+        }
+    }
+
+    // Download Image
     function downloadJPEG() {
-        const jpegUrl = getQRJpegDataUrl();
-        if (jpegUrl) {
+        if (currentImageUrl) {
             const a = document.createElement("a");
-            a.href = jpegUrl;
-            a.download = `UPI_QR_${document.getElementById("amount").value}INR.jpg`;
+            a.href = currentImageUrl;
+            a.download = `UPI_QR_${document.getElementById("amount").value}INR.png`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -558,11 +614,10 @@
         }
     }
 
-    // Copy JPEG Link
+    // Copy Image Link
     function copyQRImageLink() {
-        const jpegUrl = getQRJpegDataUrl();
-        if (jpegUrl) {
-            copyText(jpegUrl);
+        if (currentImageUrl) {
+            copyText(currentImageUrl);
         } else {
             alert("Pehle QR Code generate karein!");
         }
@@ -573,7 +628,7 @@
         if (!text) return;
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(() => {
-                alert("✅ JPEG Image Link Copied!");
+                alert("✅ Image Link Copied!");
             }).catch(() => fallbackCopy(text));
         } else {
             fallbackCopy(text);
@@ -591,7 +646,7 @@
         textArea.select();
         try {
             document.execCommand('copy');
-            alert("✅ JPEG Image Link Copied!");
+            alert("✅ Image Link Copied!");
         } catch (err) {
             alert("❌ Copy failed!");
         }
