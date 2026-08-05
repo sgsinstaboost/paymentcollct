@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Smart UPI Merchant POS</title>
+    <title>Smart UPI Merchant POS - SGS ONLINE SERVICE</title>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- QRCode JS Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Firebase JS SDK (v9 Compat Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -34,6 +39,7 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            position: relative;
         }
 
         .container {
@@ -45,6 +51,7 @@
             max-width: 420px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
             text-align: center;
+            position: relative;
         }
 
         .header {
@@ -69,6 +76,28 @@
             margin-top: 4px;
         }
 
+        .history-btn-top {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .history-btn-top:hover {
+            background: var(--primary);
+        }
+
         .input-box {
             position: relative;
             margin-bottom: 20px;
@@ -84,7 +113,6 @@
             color: var(--text-muted);
         }
 
-        /* Number Input me Se Arrow Buttons Remove Karne Ki Setting */
         input[type="number"] {
             width: 100%;
             padding: 14px 16px 14px 40px;
@@ -96,10 +124,9 @@
             font-weight: 700;
             outline: none;
             transition: all 0.3s ease;
-            -moz-appearance: textfield; /* Firefox */
+            -moz-appearance: textfield;
         }
 
-        /* Chrome, Safari, Edge, Opera ke liye arrows remove */
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -152,7 +179,7 @@
             margin: 10px 0;
         }
 
-        #qrcode img {
+        #qrcode img, #qrcode canvas {
             border-radius: 8px;
         }
 
@@ -202,6 +229,111 @@
             background: #475569;
         }
 
+        /* DRAWER STYLES */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99;
+            display: none;
+        }
+
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -360px;
+            width: 320px;
+            height: 100%;
+            background: #1e293b;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            transition: right 0.3s ease-in-out;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+        }
+
+        .drawer-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 4px;
+        }
+
+        .history-card-time {
+            font-size: 10px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .btn-card-copy {
+            width: 100%;
+            padding: 8px;
+            background: var(--primary);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
         .supported-apps {
             margin-top: 20px;
             color: var(--text-muted);
@@ -212,13 +344,17 @@
 <body>
 
 <div class="container">
+    <button class="history-btn-top" onclick="toggleDrawer(true)">
+        <i class="fa-solid fa-history"></i> History
+    </button>
+
     <div class="header">
         <i class="fa-solid fa-qrcode"></i>
         <h2>Smart UPI POS</h2>
         <p>Instant Dynamic Payment Generator</p>
     </div>
 
-    <!-- Pure Manual Amount Input Box (No Arrows) -->
+    <!-- Amount Input Box -->
     <div class="input-box">
         <span class="currency-symbol">₹</span>
         <input type="number" id="amount" placeholder="Enter Amount" min="1" step="any" oninput="checkInput()">
@@ -234,10 +370,10 @@
         <div id="qrcode"></div>
         
         <div class="action-btns">
-            <button class="btn-action btn-download" onclick="downloadQR()">
-                <i class="fa-solid fa-download"></i> Save PNG
+            <button class="btn-action btn-download" onclick="downloadJPEG()">
+                <i class="fa-solid fa-download"></i> Save JPEG
             </button>
-            <button class="btn-action btn-copy" onclick="copyUPILink()">
+            <button class="btn-action btn-copy" onclick="copyQRImageLink()">
                 <i class="fa-solid fa-copy"></i> Copy Link
             </button>
         </div>
@@ -248,19 +384,35 @@
     </div>
 </div>
 
-<script>
-    // Hidden Obfuscated & XOR Ciphered Payload
-    const _0x9a8b = "ICIwPSs4NiUgKjpDRFowIAMiKicrKSQ3NA==";
-    const _0x1c2d = [0x53, 0x45, 0x43, 0x52, 0x45, 0x54, 0x5f, 0x4b, 0x45, 0x59, 0x5f, 0x31, 0x32, 0x33];
+<!-- LINK HISTORY DRAWER -->
+<div id="drawerOverlay" class="drawer-overlay" onclick="toggleDrawer(false)"></div>
+<div id="drawer" class="drawer">
+    <div class="drawer-header">
+        <h3><i class="fa-solid fa-link"></i> Link History</h3>
+        <button class="close-btn" onclick="toggleDrawer(false)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="historyList" class="history-list">
+        <p style="text-align: center; color: #64748b; font-size: 12px;">Loading saved links...</p>
+    </div>
+</div>
 
-    function _0xfe() {
-        let raw = atob(_0x9a8b);
-        let res = "";
-        for (let i = 0; i < raw.length; i++) {
-            res += String.fromCharCode(raw.charCodeAt(i) ^ _0x1c2d[i % _0x1c2d.length]);
-        }
-        return res;
+<script>
+    // Firebase Realtime Database Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDnYNpfLEsGOhTMT1dkDReH4fRA0pgOs94",
+      authDomain: "sgs-online-service.firebaseapp.com",
+      databaseURL: "https://sgs-online-service-default-rtdb.firebaseio.com",
+      projectId: "sgs-online-service",
+      storageBucket: "sgs-online-service.firebasestorage.app",
+      messagingSenderId: "12707331594",
+      appId: "1:12707331594:web:9f5645f5744b7fc7af29f3"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
     }
+    const database = firebase.database();
 
     let currentUpiUrl = "";
 
@@ -282,7 +434,8 @@
             return;
         }
 
-        const vpa = _0xfe();
+        // Encrypted UPI ID Base64: s.kumar.2372@superyes
+        const vpa = atob("cy5rdW1hci4yMzcyQHN1cGVyeWVz"); 
         currentUpiUrl = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Merchant&am=${encodeURIComponent(amount)}&cu=INR`;
 
         qrContainer.innerHTML = "";
@@ -298,25 +451,151 @@
 
         amountDisplay.innerText = `Pay: ₹${parseFloat(amount).toLocaleString('en-IN')}`;
         qrSection.style.display = "block";
+
+        // Auto Save to Firebase
+        setTimeout(() => {
+            const jpegDataUrl = getQRJpegDataUrl();
+            if (jpegDataUrl) {
+                saveToRealtimeDB(amount, jpegDataUrl);
+            }
+        }, 300);
     }
 
-    // Function to Download QR Image
-    function downloadQR() {
+    function getQRJpegDataUrl() {
+        const canvas = document.querySelector("#qrcode canvas");
+        if (canvas) {
+            return canvas.toDataURL("image/jpeg", 0.9);
+        }
         const img = document.querySelector("#qrcode img");
-        if (img) {
-            const a = document.createElement("a");
-            a.href = img.src;
-            a.download = `UPI_QR_${document.getElementById("amount").value}INR.png`;
-            a.click();
+        if (img && img.src) {
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = img.naturalWidth || 180;
+            tempCanvas.height = img.naturalHeight || 180;
+            const ctx = tempCanvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.drawImage(img, 0, 0);
+            return tempCanvas.toDataURL("image/jpeg", 0.9);
+        }
+        return null;
+    }
+
+    // Save to Firebase Database under 'qr_history' node
+    function saveToRealtimeDB(amount, imageUrl) {
+        const newRecordRef = database.ref("qr_history").push();
+        newRecordRef.set({
+            amount: amount,
+            imageUrl: imageUrl,
+            timestamp: Date.now()
+        }).catch(err => console.error("Write Error:", err));
+    }
+
+    // Toggle Drawer
+    function toggleDrawer(open) {
+        const drawer = document.getElementById("drawer");
+        const overlay = document.getElementById("drawerOverlay");
+        if (open) {
+            drawer.classList.add("open");
+            overlay.style.display = "block";
+            fetchHistoryFromDB();
+        } else {
+            drawer.classList.remove("open");
+            overlay.style.display = "none";
         }
     }
 
-    // Function to Copy UPI Intent Link
-    function copyUPILink() {
-        if (!currentUpiUrl) return;
-        navigator.clipboard.writeText(currentUpiUrl).then(() => {
-            alert("Payment Link Copied to Clipboard!");
+    // Fetch History from Firebase Database
+    function fetchHistoryFromDB() {
+        const historyList = document.getElementById("historyList");
+        historyList.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px;">Loading history...</p>`;
+
+        database.ref("qr_history").limitToLast(20).once("value")
+        .then((snapshot) => {
+            historyList.innerHTML = "";
+            const data = snapshot.val();
+
+            if (!data) {
+                historyList.innerHTML = `<p style="text-align: center; color: #64748b; font-size: 12px;">Koi purana link nahi mila.</p>`;
+                return;
+            }
+
+            const items = Object.keys(data).map(key => data[key]).reverse();
+
+            items.forEach((item) => {
+                const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : "Just now";
+                const card = document.createElement("div");
+                card.className = "history-card";
+                card.innerHTML = `
+                    <div class="history-card-header">
+                        <span>₹${parseFloat(item.amount).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div class="history-card-time">${timeStr}</div>
+                    <button class="btn-card-copy" onclick="copyText('${item.imageUrl}')">
+                        <i class="fa-solid fa-copy"></i> Copy Image Link
+                    </button>
+                `;
+                historyList.appendChild(card);
+            });
+        })
+        .catch((error) => {
+            console.error("Firebase Read Error:", error);
+            historyList.innerHTML = `<p style="text-align: center; color: #ef4444; font-size: 12px;">Permission Error! Update Firebase Rules.</p>`;
         });
+    }
+
+    // Download JPEG File
+    function downloadJPEG() {
+        const jpegUrl = getQRJpegDataUrl();
+        if (jpegUrl) {
+            const a = document.createElement("a");
+            a.href = jpegUrl;
+            a.download = `UPI_QR_${document.getElementById("amount").value}INR.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            alert("Pehle QR Code generate karein!");
+        }
+    }
+
+    // Copy JPEG Link
+    function copyQRImageLink() {
+        const jpegUrl = getQRJpegDataUrl();
+        if (jpegUrl) {
+            copyText(jpegUrl);
+        } else {
+            alert("Pehle QR Code generate karein!");
+        }
+    }
+
+    // Universal Copy
+    function copyText(text) {
+        if (!text) return;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("✅ JPEG Image Link Copied!");
+            }).catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert("✅ JPEG Image Link Copied!");
+        } catch (err) {
+            alert("❌ Copy failed!");
+        }
+        document.body.removeChild(textArea);
     }
 </script>
 
