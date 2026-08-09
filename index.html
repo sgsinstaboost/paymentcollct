@@ -77,28 +77,6 @@
             margin-top: 4px;
         }
 
-        .history-btn-top {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-        }
-
-        .history-btn-top:hover {
-            background: var(--primary);
-        }
-
         .input-box {
             position: relative;
             margin-bottom: 20px;
@@ -230,149 +208,6 @@
             background: #475569;
         }
 
-        /* DRAWER STYLES */
-        .drawer-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 99;
-            display: none;
-        }
-
-        .drawer {
-            position: fixed;
-            top: 0;
-            right: -360px;
-            width: 320px;
-            height: 100%;
-            background: #1e293b;
-            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            transition: right 0.3s ease-in-out;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .drawer.open {
-            right: 0;
-        }
-
-        .drawer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #334155;
-            padding-bottom: 12px;
-            margin-bottom: 10px;
-        }
-
-        .drawer-header h3 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #f8fafc;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        .drawer-actions {
-            margin-bottom: 12px;
-            text-align: right;
-        }
-
-        .btn-clear-all {
-            background: rgba(239, 68, 68, 0.2);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn-clear-all:hover {
-            background: var(--danger-red);
-            color: white;
-        }
-
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .history-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            padding: 12px;
-            border-radius: 12px;
-            text-align: left;
-            position: relative;
-        }
-
-        .history-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 700;
-            color: #10b981;
-            margin-bottom: 4px;
-        }
-
-        .btn-delete-single {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 2px 4px;
-            transition: 0.2s;
-        }
-
-        .btn-delete-single:hover {
-            color: var(--danger-red);
-        }
-
-        .history-card-time {
-            font-size: 10px;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .btn-card-copy {
-            width: 100%;
-            padding: 8px;
-            background: var(--primary);
-            border: none;
-            color: white;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
         .supported-apps {
             margin-top: 20px;
             color: var(--text-muted);
@@ -383,9 +218,6 @@
 <body>
 
 <div class="container">
-    <button class="history-btn-top" onclick="toggleDrawer(true)">
-        <i class="fa-solid fa-history"></i> History
-    </button>
 
     <div class="header">
         <i class="fa-solid fa-qrcode"></i>
@@ -420,23 +252,6 @@
 
     <div class="supported-apps">
         Accepts Google Pay, PhonePe, Paytm, BHIM & all UPI Apps
-    </div>
-</div>
-
-<!-- LINK HISTORY DRAWER -->
-<div id="drawerOverlay" class="drawer-overlay" onclick="toggleDrawer(false)"></div>
-<div id="drawer" class="drawer">
-    <div class="drawer-header">
-        <h3><i class="fa-solid fa-link"></i> Link History</h3>
-        <button class="close-btn" onclick="toggleDrawer(false)"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="drawer-actions">
-        <button class="btn-clear-all" onclick="clearAllHistory()">
-            <i class="fa-solid fa-trash-can"></i> Clear All History
-        </button>
-    </div>
-    <div id="historyList" class="history-list">
-        <p style="text-align: center; color: #64748b; font-size: 12px;">Loading saved links...</p>
     </div>
 </div>
 
@@ -488,9 +303,9 @@
             return;
         }
 
-        // Encrypted UPI ID Base64: s.kumar.2372@superyes
-        const vpa = atob("cy5rdW1hci4yMzcyQHN1cGVyeWVz"); 
-        const upiData = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=Merchant&am=${encodeURIComponent(amount)}&cu=INR`;
+        // Updated UPI ID from photo: sgsonlineservice@postbank
+        const vpa = "sgsonlineservice@postbank"; 
+        const upiData = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent("Ganesh Digital world")}&am=${encodeURIComponent(amount)}&cu=INR`;
 
         // Direct Normal HTTPS Image Link (No Base64)
         currentImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(upiData)}&size=200&format=png`;
@@ -523,81 +338,6 @@
             imageUrl: imageUrl,
             timestamp: Date.now()
         }).catch(err => console.error("Write Error:", err));
-    }
-
-    // Toggle Drawer
-    function toggleDrawer(open) {
-        const drawer = document.getElementById("drawer");
-        const overlay = document.getElementById("drawerOverlay");
-        if (open) {
-            drawer.classList.add("open");
-            overlay.style.display = "block";
-            fetchHistoryFromDB();
-        } else {
-            drawer.classList.remove("open");
-            overlay.style.display = "none";
-        }
-    }
-
-    // Fetch History from Firebase Database
-    function fetchHistoryFromDB() {
-        const historyList = document.getElementById("historyList");
-        historyList.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px;">Loading history...</p>`;
-
-        database.ref("qr_history").limitToLast(20).once("value")
-        .then((snapshot) => {
-            historyList.innerHTML = "";
-            const data = snapshot.val();
-
-            if (!data) {
-                historyList.innerHTML = `<p style="text-align: center; color: #64748b; font-size: 12px;">Koi purana link nahi mila.</p>`;
-                return;
-            }
-
-            const keys = Object.keys(data).reverse();
-
-            keys.forEach((key) => {
-                const item = data[key];
-                const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : "Just now";
-                const card = document.createElement("div");
-                card.className = "history-card";
-                card.innerHTML = `
-                    <div class="history-card-header">
-                        <span>₹${parseFloat(item.amount).toLocaleString('en-IN')}</span>
-                        <button class="btn-delete-single" onclick="deleteHistoryItem('${key}')" title="Delete Link">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                    <div class="history-card-time">${timeStr}</div>
-                    <button class="btn-card-copy" onclick="copyText('${item.imageUrl}')">
-                        <i class="fa-solid fa-copy"></i> Copy Image Link
-                    </button>
-                `;
-                historyList.appendChild(card);
-            });
-        })
-        .catch((error) => {
-            console.error("Firebase Read Error:", error);
-            historyList.innerHTML = `<p style="text-align: center; color: #ef4444; font-size: 12px;">Permission Error! Update Firebase Rules.</p>`;
-        });
-    }
-
-    // Delete single history item
-    function deleteHistoryItem(key) {
-        if (confirm("Kya aap is link ko delete karna chahte hain?")) {
-            database.ref("qr_history/" + key).remove()
-            .then(() => fetchHistoryFromDB())
-            .catch(err => alert("Delete karne me error aaya!"));
-        }
-    }
-
-    // Clear all history items
-    function clearAllHistory() {
-        if (confirm("Kya aap saare history links clear karna chahte hain?")) {
-            database.ref("qr_history").remove()
-            .then(() => fetchHistoryFromDB())
-            .catch(err => alert("Clear karte waqt error aaya!"));
-        }
     }
 
     // Download Image
